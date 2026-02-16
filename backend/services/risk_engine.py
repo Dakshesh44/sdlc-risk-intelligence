@@ -1,24 +1,79 @@
 """
-SOURCE OF TRUTH — BASELINE RISK ENGINE (v1)
+ML PRIMARY RISK ENGINE (Transition Phase)
 
-This file defines the canonical risk computation logic.
-All ML training pipelines must use this engine as teacher.
-Any modification requires version upgrade.
-
-Deterministic. No randomness allowed.
+- ML is primary decision engine.
+- Baseline remains as fallback.
+- No recursion.
 """
 
+from backend.ml.feature_config import FEATURE_ORDER
+from backend.ml.model_loader import predict_proba
 from backend.utils.preprocessing import generate_engineered_features
 from backend.utils.risk_scoring import (
     calculate_risk_scores,
     calculate_feature_contributions
 )
 
+SDLC_CLASSES = [
+    "Waterfall",
+    "Agile",
+    "Spiral",
+    "V-Model",
+    "DevOps",
+    "Hybrid"
+]
+
+
+# ===============================
+# ML ENGINE
+# ===============================
+
+def run_ml_engine(features: dict):
+
+    feature_vector = [features[name] for name in FEATURE_ORDER]
+    if len(feature_vector) != 28:
+        raise ValueError("Feature vector length mismatch")
+    probabilities = predict_proba(feature_vector)
+
+    scores = {
+        SDLC_CLASSES[i]: round(float(probabilities[i]), 4)
+        for i in range(len(SDLC_CLASSES))
+    }
+
+    ranking = sorted(scores, key=scores.get, reverse=True)
+    recommended = ranking[0]
+
+    if len(ranking) > 1:
+        best = scores[ranking[0]]
+        second = scores[ranking[1]]
+        confidence = round(best - second, 4)
+    else:
+        confidence = 1.0
+
+    risk_band = {
+        model: (
+            "Low" if score > 0.66 else
+            "Medium" if score > 0.33 else
+            "High"
+        )
+        for model, score in scores.items()
+    }
+
+    return {
+        "risks": scores,
+        "ranking": ranking,
+        "recommended": recommended,
+        "confidence": confidence,
+        "risk_band": risk_band,
+        "model_version": "ml_v1"
+    }
+
+
+# ===============================
+# BASELINE ENGINE (FALLBACK)
+# ===============================
 
 def classify_risk(score: float) -> str:
-    """
-    Classify risk score into categorical band.
-    """
     if score < 0.33:
         return "Low"
     elif score < 0.66:
@@ -27,62 +82,32 @@ def classify_risk(score: float) -> str:
         return "High"
 
 
-def run_risk_engine(project):
-    """
-    Main orchestration function for baseline risk evaluation.
+def run_baseline_engine(project):
 
-    Steps:
-    1. Feature engineering
-    2. Risk scoring per SDLC
-    3. Ranking
-    4. Confidence computation
-    5. Risk band classification
-    6. Explainability (top contributing factors)
-    """
-
-    # 1️⃣ Feature Engineering
     features = generate_engineered_features(project)
-
-    # 2️⃣ Risk Calculation
     scores = calculate_risk_scores(features)
 
-    if not scores:
-        raise ValueError("Risk scores could not be computed.")
-
-    # 3️⃣ Ranking (Lower score = lower risk)
     ranking = sorted(scores, key=scores.get)
-
-    if len(ranking) < 1:
-        raise ValueError("Ranking failed. No SDLC models available.")
-
     recommended = ranking[0]
 
-    # 4️⃣ Confidence Calculation
-    if len(ranking) < 2:
-        confidence = 1.0
-    else:
+    if len(ranking) > 1:
         best_score = scores[ranking[0]]
         second_score = scores[ranking[1]]
+        confidence = round(
+            (second_score - best_score) / second_score,
+            4
+        ) if second_score != 0 else 1.0
+    else:
+        confidence = 1.0
 
-        if second_score == 0:
-            confidence = 1.0
-        else:
-            confidence = round(
-                (second_score - best_score) / second_score,
-                4
-            )
-
-    # 5️⃣ Risk Band Classification
     risk_band = {
         model: classify_risk(score)
         for model, score in scores.items()
     }
 
-    # 6️⃣ Explainability (Top 3 Contributing Factors)
     contributions = calculate_feature_contributions(features, recommended)
     top_factors = list(contributions.keys())[:3]
 
-    # Final Structured Response
     return {
         "risks": scores,
         "ranking": ranking,
@@ -92,3 +117,18 @@ def run_risk_engine(project):
         "top_contributing_factors": top_factors,
         "model_version": "baseline_v1"
     }
+
+
+# ===============================
+# ORCHESTRATOR
+# ===============================
+
+def run_risk_engine(project):
+
+    features = generate_engineered_features(project)
+
+    try:
+        return run_ml_engine(features)
+    except Exception:
+        # If ML fails, use deterministic baseline
+        return run_baseline_engine(project)
