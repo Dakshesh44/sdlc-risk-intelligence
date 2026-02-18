@@ -101,10 +101,16 @@ def predict_project(features_dict: dict) -> dict:
     # --------------------------------------------------
     # 🔹 SHAP EXPLANATION
     # --------------------------------------------------
-    shap_values = explainer.shap_values(input_array)
+    shap_values = explainer(input_array)
 
-    # Multi-class: shap_values is list per class
-    class_shap = shap_values[predicted_index][0]
+# SHAP output handling (compatible with new versions)
+    if hasattr(shap_values, "values"):
+    # New SHAP API
+        class_shap = shap_values.values[0, predicted_index]
+    else:
+    # Older SHAP API
+        class_shap = shap_values[predicted_index][0]
+
 
     # Get top 3 contributing features
     feature_impacts = list(zip(FEATURE_ORDER, class_shap))
