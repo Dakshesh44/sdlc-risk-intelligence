@@ -1,33 +1,41 @@
 {
-  "model_name": "SDLC Decision Intelligence Model",
-  "version": "v1.0",
-  "training_date": "2026-02-18",
-  "dataset_name": "sdlc_dataset_1800.csv",
-  "total_projects": 300,
-  "train_projects": 240,
-  "test_projects": 60,
+  "model_version": "ml_v1",
   "feature_count": 28,
-  "classes": [
+  "feature_order": [
+    "schedule_pressure_index",
+    "budget_adequacy_ratio",
+    "project_scale_index",
+    "team_capacity_index",
+    "team_experience_score",
+    "requirements_volatility",
+    "requirements_clarity_score",
+    "change_request_intensity",
+    "scope_complexity_index",
+    "process_maturity_score",
+    "client_engagement_score",
+    "decision_latency_index",
+    "risk_management_maturity",
+    "sprint_discipline_score",
+    "technical_complexity_index",
+    "integration_risk_index",
+    "automation_maturity_score",
+    "legacy_dependency_index",
+    "toolchain_reliability_score",
+    "regulatory_risk_index",
+    "domain_criticality_index",
+    "external_dependency_risk",
+    "time_to_market_pressure",
+    "resource_stability_index",
+    "risk_tolerance_index",
+    "overall_uncertainty_index",
+    "stakeholder_alignment_score",
+    "domain_familiarity_score"
+  ],
+  "class_labels": [
     "Agile",
     "DevOps",
     "Spiral",
     "V-Model",
     "Waterfall"
-  ],
-  "metrics": {
-    "project_top1_accuracy": 0.80,
-    "project_top2_accuracy": 0.9167,
-    "macro_f1": 0.71
-  },
-  "model_type": "XGBoost Multi-Class",
-  "xgboost_parameters": {
-    "n_estimators": 150,
-    "max_depth": 5,
-    "learning_rate": 0.1,
-    "subsample": 0.9,
-    "colsample_bytree": 0.9,
-    "objective": "multi:softprob"
-  },
-  "random_state": 42,
-  "notes": "Project-level split with stratification. No leakage. Analytical SDLC labels derived from GitHub feature mapping."
+  ]
 }
