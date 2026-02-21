@@ -15,10 +15,10 @@ app = FastAPI()
 # Allow local and deployed frontend apps to call the API.
 cors_origins = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,https://helix-risk.onrender.com",
+    "http://localhost:5173,http://127.0.0.1:5173,https://helix-risk.onrender.com,https://helixrisk.vercel.app",
 )
 allow_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-cors_origin_regex = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.onrender\.com")
+cors_origin_regex = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.(onrender\.com|vercel\.app)")
 
 app.add_middleware(
     CORSMiddleware,
