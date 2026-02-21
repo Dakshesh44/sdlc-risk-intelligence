@@ -30,8 +30,7 @@ const Login = () => {
         login({
             fullName: formData.fullName.trim(),
             email: formData.email.trim(),
-            organization: 'FlowPilot Workspace',
-            token: 'dummy-token-' + Date.now()
+            organization: 'FlowPilot Workspace'
         });
     };
 

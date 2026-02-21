@@ -110,6 +110,10 @@ export const AnalysisProvider = ({ children }) => {
             status: 'Completed',
             explainability: result.explainability || [],
             modelScores: result.modelScores || [],
+            predictionProjectId: result.projectId || null,
+            modelVersion: result.modelVersion || null,
+            inferenceTime: result.inferenceTime ?? null,
+            explainabilitySource: result.explainabilitySource || null,
             generatedAt: result.generatedAt || new Date().toISOString(),
             ...formData
         };

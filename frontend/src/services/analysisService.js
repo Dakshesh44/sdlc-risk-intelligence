@@ -1,5 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || null;
-const API_ANALYZE_PATH = import.meta.env.VITE_API_ANALYZE_PATH || "/analyze";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const API_ANALYZE_PATH = import.meta.env.VITE_API_ANALYZE_PATH || "/predict";
 const API_PAYLOAD_STYLE = (import.meta.env.VITE_API_PAYLOAD_STYLE || "snake").toLowerCase();
 
 const toNumber = (value, fallback = 0) => {
@@ -46,12 +46,21 @@ const createRequestPayload = (data) => {
 };
 
 const extractExplainability = (raw) => {
-  const source = raw.explainability || raw.explanations || raw.reasons || raw.insights || [];
+  const source =
+    raw.explainability ||
+    raw.explanations ||
+    raw.reasons ||
+    raw.insights ||
+    raw.top_contributing_factors ||
+    [];
 
   if (Array.isArray(source)) {
     return source.map((item, index) => {
       if (typeof item === "string") {
-        return { title: `Insight ${index + 1}`, text: item };
+        return {
+          title: `Factor ${index + 1}`,
+          text: `Top contributing factor: ${item.replace(/_/g, " ")}`,
+        };
       }
       return {
         title: item.title || item.label || `Insight ${index + 1}`,
@@ -76,6 +85,7 @@ const extractModelScores = (raw, selectedModel, confidence) => {
     raw.modelScores ||
     raw.alternatives ||
     raw.candidates ||
+    raw.risks ||
     [];
 
   if (Array.isArray(alternatives) && alternatives.length) {
@@ -91,9 +101,12 @@ const extractModelScores = (raw, selectedModel, confidence) => {
   }
 
   if (alternatives && typeof alternatives === "object") {
+    const isBaseline = String(raw.model_version || "").toLowerCase().includes("baseline");
     return Object.entries(alternatives).map(([name, value]) => ({
       name,
-      suitability: clampPercentage(toNumber(value) <= 1 ? toNumber(value) * 100 : value),
+      suitability: isBaseline
+        ? clampPercentage(100 - (toNumber(value) <= 1 ? toNumber(value) * 100 : value))
+        : clampPercentage(toNumber(value) <= 1 ? toNumber(value) * 100 : value),
     }));
   }
 
@@ -103,6 +116,7 @@ const extractModelScores = (raw, selectedModel, confidence) => {
 const normalizeResponse = (raw) => {
   const model =
     raw.model ||
+    raw.recommended ||
     raw.recommended_model ||
     raw.recommendedModel ||
     raw.predicted_model ||
@@ -121,7 +135,7 @@ const normalizeResponse = (raw) => {
   const confidence = clampPercentage(toNumber(baseConfidence) <= 1 ? toNumber(baseConfidence) * 100 : baseConfidence);
 
   if (!model) {
-    throw new Error("Backend response missing model field (expected model/recommended_model/predicted_model).");
+    throw new Error("Backend response missing model field (expected recommended/model/recommended_model/predicted_model).");
   }
 
   return {
@@ -129,6 +143,10 @@ const normalizeResponse = (raw) => {
     confidence: confidence || 0,
     explainability: extractExplainability(raw),
     modelScores: extractModelScores(raw, model, confidence || 0),
+    projectId: raw.project_id || raw.projectId || null,
+    modelVersion: raw.model_version || raw.modelVersion || null,
+    inferenceTime: raw.inference_time ?? raw.inferenceTime ?? null,
+    explainabilitySource: raw.explainability_source || raw.explainabilitySource || null,
     generatedAt: raw.generated_at || raw.generatedAt || new Date().toISOString(),
   };
 };
@@ -148,9 +166,7 @@ export const AnalysisService = {
       throw new Error("Analysis failed: Backend is not configured. (VITE_API_URL missing)");
     }
 
-    const token = localStorage.getItem("fp_token");
     const headers = { "Content-Type": "application/json" };
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     try {
       const response = await fetch(`${API_BASE_URL}${API_ANALYZE_PATH}`, {
@@ -171,5 +187,23 @@ export const AnalysisService = {
       }
       throw error;
     }
+  },
+  async getModelStatus() {
+    const response = await fetch(`${API_BASE_URL}/model-status`);
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+    return response.json();
+  },
+  async submitFeedback(data) {
+    const response = await fetch(`${API_BASE_URL}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(await parseErrorMessage(response));
+    }
+    return response.json();
   },
 };

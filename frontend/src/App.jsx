@@ -11,11 +11,28 @@ import ProjectSelection from './pages/ProjectSelection';
 import { ThemeProvider } from './context/ThemeContext';
 import { AnalysisProvider, useAnalysis } from './context/AnalysisContext';
 import MouseGlow from './components/MouseGlow';
+import ErrorBoundary from './components/ErrorBoundary';
+import { AnalysisService } from './services/analysisService';
 
 function AppContent() {
     const { userProfile, activeProjectId } = useAnalysis();
     const [activeTab, setActiveTab] = useState('Home');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [modelHealth, setModelHealth] = useState({ loading: true, ml_model_loaded: false });
+
+    useEffect(() => {
+        let mounted = true;
+        AnalysisService.getModelStatus()
+            .then((data) => {
+                if (mounted) setModelHealth({ loading: false, ...data });
+            })
+            .catch(() => {
+                if (mounted) setModelHealth({ loading: false, ml_model_loaded: false, error: 'unreachable' });
+            });
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     // State Machine Routing
     if (!userProfile) {
@@ -56,6 +73,7 @@ function AppContent() {
                     onMenuToggle={() => setSidebarOpen(true)}
                     onOpenResults={() => setActiveTab('Results Dashboard')}
                     onOpenHistory={() => setActiveTab('History')}
+                    modelHealth={modelHealth}
                 />
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 outline-none">
@@ -72,7 +90,9 @@ function App() {
     return (
         <ThemeProvider>
             <AnalysisProvider>
-                <AppContent />
+                <ErrorBoundary>
+                    <AppContent />
+                </ErrorBoundary>
             </AnalysisProvider>
         </ThemeProvider>
     );

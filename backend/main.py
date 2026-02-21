@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.ml.model_loader import load_model
+from ml.model_loader import load_model
 from backend.routes.feedback import router as feedback_router
 from backend.routes.model_status import router as model_status_router
 from backend.routes.predict import router as predict_router

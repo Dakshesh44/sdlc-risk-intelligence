@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.ml.model_loader import load_model
+from ml.model_loader import load_model
 
 router = APIRouter()
 

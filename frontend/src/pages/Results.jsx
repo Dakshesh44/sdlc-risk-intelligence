@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, Button } from '../components/UI';
+import { Card, Button, Alert } from '../components/UI';
 import { ChartContainer, CustomTooltip } from '../components/Chart';
 import { Table, TableRow, TableCell } from '../components/Table';
 import {
@@ -11,10 +11,15 @@ import {
     Download, Share2, TrendingUp, Info
 } from 'lucide-react';
 import { useAnalysis } from '../context/AnalysisContext';
+import { AnalysisService } from '../services/analysisService';
 
 const Results = () => {
     const { currentResult } = useAnalysis();
     const [selectedAlternative, setSelectedAlternative] = useState(null);
+    const [feedbackForm, setFeedbackForm] = useState({ actualOutcome: '', notes: '' });
+    const [feedbackMsg, setFeedbackMsg] = useState(null);
+    const [feedbackErr, setFeedbackErr] = useState(null);
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
     if (!currentResult) {
         return (
@@ -81,6 +86,40 @@ const Results = () => {
         .filter((item) => item.name !== currentResult.model)
         .sort((a, b) => (b.suitability || 0) - (a.suitability || 0))
         .slice(0, 3);
+
+    const handleFeedbackSubmit = async (e) => {
+        e.preventDefault();
+        setFeedbackErr(null);
+        setFeedbackMsg(null);
+
+        if (!currentResult.predictionProjectId) {
+            setFeedbackErr('Missing project_id for this analysis result.');
+            return;
+        }
+        if (!feedbackForm.actualOutcome) {
+            setFeedbackErr('Please choose actual outcome.');
+            return;
+        }
+
+        try {
+            setSubmittingFeedback(true);
+            await AnalysisService.submitFeedback({
+                project_id: currentResult.predictionProjectId,
+                actual_outcome: feedbackForm.actualOutcome,
+                notes: feedbackForm.notes || '',
+                actual_sdlc_used: currentResult.model,
+                success_score: feedbackForm.actualOutcome === 'success' ? 9 : 4,
+                risk_realized: feedbackForm.actualOutcome === 'success' ? 'Low' : 'High',
+                completion_status: feedbackForm.actualOutcome === 'success' ? 'Completed' : 'At Risk',
+            });
+            setFeedbackMsg('Feedback submitted successfully.');
+            setFeedbackForm({ actualOutcome: '', notes: '' });
+        } catch (error) {
+            setFeedbackErr(error.message || 'Failed to submit feedback.');
+        } finally {
+            setSubmittingFeedback(false);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -198,6 +237,62 @@ const Results = () => {
                             </div>
                         )}
                     </div>
+                </Card>
+
+                <Card title="Inference Transparency" subtitle="Runtime and explainability metadata" className="lg:col-span-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="p-4 rounded-xl bg-accent/30 border border-border">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">Model Version</p>
+                            <p className="font-semibold mt-1">{currentResult.modelVersion || 'Unknown'}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-accent/30 border border-border">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">Inference Time</p>
+                            <p className="font-semibold mt-1">
+                                {currentResult.inferenceTime !== null && currentResult.inferenceTime !== undefined
+                                    ? `${Math.round(Number(currentResult.inferenceTime) * 1000)} ms`
+                                    : 'Unknown'}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-accent/30 border border-border">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">Explainability</p>
+                            <p className="font-semibold mt-1 uppercase">{currentResult.explainabilitySource || 'unknown'}</p>
+                        </div>
+                    </div>
+                </Card>
+
+                <Card title="Submit Actual Outcome" subtitle="Close the loop with real project feedback" className="lg:col-span-3">
+                    <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+                        {feedbackMsg && <Alert variant="success">{feedbackMsg}</Alert>}
+                        {feedbackErr && <Alert variant="error">{feedbackErr}</Alert>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold tracking-wider uppercase opacity-70">Actual Outcome</label>
+                                <select
+                                    value={feedbackForm.actualOutcome}
+                                    onChange={(e) => setFeedbackForm((prev) => ({ ...prev, actualOutcome: e.target.value }))}
+                                    className="w-full bg-accent/30 border border-border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                >
+                                    <option value="">Select outcome</option>
+                                    <option value="success">Success</option>
+                                    <option value="failure">Failure</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold tracking-wider uppercase opacity-70">Notes (Optional)</label>
+                                <input
+                                    value={feedbackForm.notes}
+                                    onChange={(e) => setFeedbackForm((prev) => ({ ...prev, notes: e.target.value }))}
+                                    className="w-full bg-accent/30 border border-border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                    placeholder="Any key observations..."
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={submittingFeedback}>
+                                {submittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                            </Button>
+                        </div>
+                    </form>
                 </Card>
 
                 <Card title="Alternative Models" subtitle="Comparison of secondary options" className="lg:col-span-3">

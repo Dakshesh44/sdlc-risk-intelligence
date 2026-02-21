@@ -3,7 +3,7 @@ import { Sun, Moon, Bell, Search, User, Menu, FolderKanban } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext';
 import { useAnalysis } from '../context/AnalysisContext';
 
-const Navbar = ({ activeTab, onMenuToggle, onOpenResults, onOpenHistory }) => {
+const Navbar = ({ activeTab, onMenuToggle, onOpenResults, onOpenHistory, modelHealth }) => {
     const { darkMode, toggleTheme } = useTheme();
     const { history, selectAnalysis, userProfile, setActiveProjectId, projects, activeProjectId } = useAnalysis();
 
@@ -65,6 +65,15 @@ const Navbar = ({ activeTab, onMenuToggle, onOpenResults, onOpenHistory }) => {
                     </button>
                     <span className="opacity-50">/</span>
                     <span className="text-foreground font-medium">{activeTab}</span>
+                </div>
+                <div className="hidden md:flex items-center ml-2">
+                    {modelHealth?.loading ? (
+                        <span className="text-xs px-2 py-1 rounded-full bg-accent text-muted-foreground">Model Checking</span>
+                    ) : modelHealth?.ml_model_loaded ? (
+                        <span className="text-xs px-2 py-1 rounded-full bg-green-500/15 text-green-500">Model Ready</span>
+                    ) : (
+                        <span className="text-xs px-2 py-1 rounded-full bg-red-500/15 text-red-500">Model Error</span>
+                    )}
                 </div>
             </div>
 

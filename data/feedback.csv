@@ -1,4 +1,0 @@
-project_id,timestamp,actual_sdlc_used,success_score,risk_realized,completion_status
-c290bdf1-046f-4bed-b72e-c1eb0262fe58,2026-02-19T12:27:47.998252,string,0,string,string
-a333de19-688f-41c3-8a33-70d72a063aeb,2026-02-19T15:05:12.996663,Agile,80,No,Completed
-ce942c80-eb84-4854-9373-f66151ae9ba3,2026-02-20T12:25:40.232764,Agile,80,No,Completed
