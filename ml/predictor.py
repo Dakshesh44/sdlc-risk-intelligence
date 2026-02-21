@@ -95,7 +95,10 @@ def _extract_shap_top_factors(features: dict, recommended: str, top_k: int = 3) 
         key=lambda pair: abs(float(pair[1])),
         reverse=True,
     )
-    return [name for name, _ in impacts[:top_k]]
+    return [
+        {"feature": name, "impact": float(value)}
+        for name, value in impacts[:top_k]
+    ]
 
 
 def _build_ml_result(project) -> tuple[dict, dict]:
@@ -115,15 +118,18 @@ def _build_ml_result(project) -> tuple[dict, dict]:
     }
     ranking = sorted(risks, key=risks.get, reverse=True)
     recommended = ranking[0]
-    confidence = _confidence_from_descending_scores(risks, ranking)
+    confidence = risks[recommended]
 
     try:
         top_factors = _extract_shap_top_factors(features, recommended)
         explainability_source = "shap"
     except Exception as shap_error:
-        logger.warning("SHAP explainability unavailable, using weighted fallback: %s", shap_error)
+        logger.exception("SHAP failed, using weighted fallback: %s", shap_error)
         contributions = calculate_feature_contributions(features, recommended)
-        top_factors = list(contributions.keys())[:3]
+        top_factors = [
+            {"feature": name, "impact": float(value)}
+            for name, value in list(contributions.items())[:3]
+        ]
         explainability_source = "fallback"
 
     result = {
@@ -144,7 +150,10 @@ def _build_baseline_result(project) -> tuple[dict, dict]:
     ranking = sorted(risks, key=risks.get)
     recommended = ranking[0]
     confidence = _confidence_from_ascending_scores(risks, ranking)
-    top_factors = list(calculate_feature_contributions(features, recommended).keys())[:3]
+    top_factors = [
+        {"feature": name, "impact": float(value)}
+        for name, value in list(calculate_feature_contributions(features, recommended).items())[:3]
+    ]
 
     result = {
         "recommended": recommended,
@@ -167,6 +176,12 @@ def run_prediction(project_input):
     except Exception as ml_error:
         logger.error("ML prediction failed, switching to baseline: %s", ml_error)
         result, features = _build_baseline_result(project_input)
+
+    logger.info(
+        "SHAP enabled: %s | explainability_source: %s",
+        _shap_enabled(),
+        result.get("explainability_source"),
+    )
 
     result["inference_time"] = round(time.time() - start, 4)
     result["project_id"] = project_id

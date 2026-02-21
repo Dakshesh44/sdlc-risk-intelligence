@@ -63,8 +63,14 @@ const extractExplainability = (raw) => {
         };
       }
       return {
-        title: item.title || item.label || `Insight ${index + 1}`,
-        text: item.text || item.reason || item.description || "",
+        title: item.title || item.label || item.feature || `Insight ${index + 1}`,
+        text:
+          item.text ||
+          item.reason ||
+          item.description ||
+          (item.feature
+            ? `Impact: ${toNumber(item.impact).toFixed(4)}`
+            : ""),
       };
     });
   }
