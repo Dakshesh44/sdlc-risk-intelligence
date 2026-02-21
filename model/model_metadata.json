@@ -1,0 +1,41 @@
+{
+  "model_version": "ml_v1",
+  "feature_count": 28,
+  "feature_order": [
+    "schedule_pressure_index",
+    "budget_adequacy_ratio",
+    "project_scale_index",
+    "team_capacity_index",
+    "team_experience_score",
+    "requirements_volatility",
+    "requirements_clarity_score",
+    "change_request_intensity",
+    "scope_complexity_index",
+    "process_maturity_score",
+    "client_engagement_score",
+    "decision_latency_index",
+    "risk_management_maturity",
+    "sprint_discipline_score",
+    "technical_complexity_index",
+    "integration_risk_index",
+    "automation_maturity_score",
+    "legacy_dependency_index",
+    "toolchain_reliability_score",
+    "regulatory_risk_index",
+    "domain_criticality_index",
+    "external_dependency_risk",
+    "time_to_market_pressure",
+    "resource_stability_index",
+    "risk_tolerance_index",
+    "overall_uncertainty_index",
+    "stakeholder_alignment_score",
+    "domain_familiarity_score"
+  ],
+  "class_labels": [
+    "Agile",
+    "DevOps",
+    "Spiral",
+    "V-Model",
+    "Waterfall"
+  ]
+}
