@@ -40,7 +40,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
                             <Cpu size={24} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold tracking-tight">FlowPilot</h1>
+                            <h1 className="text-xl font-bold tracking-tight">HelixRisk</h1>
                             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold opacity-60">SDLC Engine</p>
                         </div>
                     </div>

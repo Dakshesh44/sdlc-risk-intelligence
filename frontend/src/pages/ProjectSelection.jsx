@@ -114,7 +114,7 @@ const ProjectSelection = () => {
                                 <div className="w-7 h-7 rounded-sm flex items-center justify-center">
                                     <Brain className="text-[#5B55F6]" size={22} strokeWidth={2.5} />
                                 </div>
-                                FlowEngine V3 Capability Overview
+                                HelixRisk V3 Capability Overview
                             </h3>
                             <p className="text-[13px] text-muted-foreground/80 leading-[1.6] max-w-3xl pl-10 pr-4">
                                 Our AI-driven analysis engine evaluates 16 diverse programmatic vectors—ranging from team experience and requirement stability to risk tolerance and integration complexity—to recommend the ideal Software Development Life Cycle (SDLC) model for your specific constraints.

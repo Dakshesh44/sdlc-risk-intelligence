@@ -125,7 +125,7 @@ const Settings = () => {
                                 <Dropdown
                                     label="Analysis Model"
                                     options={[
-                                        { label: 'FlowEngine V3 (Latest)', value: 'v3' },
+                                        { label: 'HelixRisk V3 (Latest)', value: 'v3' },
                                         { label: 'Legacy V2.4', value: 'v2' },
                                     ]}
                                     value={settings.analysisModel}

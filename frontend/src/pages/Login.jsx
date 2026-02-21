@@ -30,7 +30,7 @@ const Login = () => {
         login({
             fullName: formData.fullName.trim(),
             email: formData.email.trim(),
-            organization: 'FlowPilot Workspace'
+            organization: 'HelixRisk Workspace'
         });
     };
 
@@ -46,7 +46,7 @@ const Login = () => {
                     <div className="w-16 h-16 bg-gradient-to-br from-primary to-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white shadow-xl shadow-primary/20 mb-4">
                         <Shield size={32} />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight">FlowEngine V3</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">HelixRisk V3</h1>
                     <p className="text-muted-foreground mt-2">SDLC Recommendation System</p>
                 </div>
 
