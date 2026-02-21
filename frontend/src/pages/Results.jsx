@@ -13,6 +13,26 @@ import {
 import { useAnalysis } from '../context/AnalysisContext';
 import { AnalysisService } from '../services/analysisService';
 
+const toPercent = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+
+const modelFitLabel = (suitability) => {
+    if (suitability >= 75) return 'highly compatible';
+    if (suitability >= 55) return 'moderately compatible';
+    return 'low compatibility';
+};
+
+const modelTimeLabel = (suitability) => {
+    if (suitability >= 70) return 'accelerated delivery';
+    if (suitability >= 55) return 'steady delivery';
+    return 'slower delivery';
+};
+
+const modelLoadLabel = (suitability) => {
+    if (suitability >= 70) return 'medium resource load';
+    if (suitability >= 55) return 'high resource load';
+    return 'very high resource load';
+};
+
 const Results = () => {
     const { currentResult } = useAnalysis();
     const [selectedAlternative, setSelectedAlternative] = useState(null);
@@ -53,14 +73,124 @@ const Results = () => {
 
     const COLORS = ['#4F46E5', '#1e1b4b'];
 
-    const handleExport = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentResult, null, 2));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `${currentResult.name}_SDLC_Report.json`);
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+    const handleExport = async () => {
+        try {
+            const { jsPDF } = await import('jspdf');
+            const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 44;
+            const contentWidth = pageWidth - (margin * 2);
+            let y = 52;
+
+            const ensureSpace = (required = 20) => {
+                if (y + required > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+            };
+
+            const addHeading = (text) => {
+                ensureSpace(28);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.text(text, margin, y);
+                y += 22;
+            };
+
+            const addParagraph = (text, size = 11) => {
+                if (!text) return;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(size);
+                const lines = doc.splitTextToSize(String(text), contentWidth);
+                ensureSpace((lines.length * 14) + 8);
+                doc.text(lines, margin, y);
+                y += (lines.length * 14) + 8;
+            };
+
+            const addRow = (label, value) => {
+                const text = `${label}: ${value ?? 'N/A'}`;
+                addParagraph(text, 10);
+            };
+
+            const confidence = toPercent(currentResult.confidence);
+            const ranking = [...modelScores].sort((a, b) => (b.suitability || 0) - (a.suitability || 0));
+            const generatedAt = currentResult.generatedAt
+                ? new Date(currentResult.generatedAt).toLocaleString()
+                : new Date().toLocaleString();
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.text('HelixRisk SDLC Analysis Report', margin, y);
+            y += 28;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Generated: ${generatedAt}`, margin, y);
+            y += 18;
+            doc.text(`Project: ${currentResult.name || 'Untitled Project'}`, margin, y);
+            y += 26;
+
+            addHeading('Executive Summary');
+            addParagraph(
+                `${currentResult.model} is the recommended SDLC method with a confidence score of ${confidence}%. ` +
+                `This recommendation is based on your submitted project constraints, delivery pressure, complexity profile, and team readiness signals.`
+            );
+
+            addHeading('Final Recommendation');
+            addRow('Recommended method', currentResult.model);
+            addRow('Confidence score', `${confidence}%`);
+            addRow('Project reference', currentResult.predictionProjectId || currentResult.projectId || 'N/A');
+
+            addHeading('Model Ranking and Risk Comparison');
+            ranking.forEach((item, index) => {
+                const suitability = toPercent(item.suitability);
+                const risk = Math.max(0, 100 - suitability);
+                addParagraph(
+                    `${index + 1}. ${item.name}: suitability ${suitability}% and projected risk ${risk}%.`,
+                    10
+                );
+            });
+
+            addHeading('Why This Method Was Chosen');
+            if (currentResult.explainability?.length) {
+                currentResult.explainability.slice(0, 8).forEach((item, index) => {
+                    addParagraph(`${index + 1}. ${item.title}: ${item.text}`, 10);
+                });
+            } else {
+                addParagraph('No feature-level explainability details were available for this prediction.', 10);
+            }
+
+            addHeading('Why Other Methods Were Not Selected');
+            const alternativeMethods = ranking.filter((item) => item.name !== currentResult.model);
+            if (alternativeMethods.length) {
+                alternativeMethods.forEach((item, index) => {
+                    const suitability = toPercent(item.suitability);
+                    const gap = Math.max(0, confidence - suitability);
+                    addParagraph(
+                        `${index + 1}. ${item.name} was not selected because it scored ${suitability}% (${gap} points below ${currentResult.model}). ` +
+                        `For this project profile, it appears ${modelFitLabel(suitability)} with ${modelTimeLabel(suitability)} and ${modelLoadLabel(suitability)}.`,
+                        10
+                    );
+                });
+            } else {
+                addParagraph('No alternative method data was available to compare against the selected recommendation.', 10);
+            }
+
+            addHeading('Inference Transparency');
+            addRow('Model version', currentResult.modelVersion || 'Unknown');
+            addRow(
+                'Inference time',
+                currentResult.inferenceTime !== null && currentResult.inferenceTime !== undefined
+                    ? `${Math.round(Number(currentResult.inferenceTime) * 1000)} ms`
+                    : 'Unknown'
+            );
+            addRow('Explainability source', currentResult.explainabilitySource || 'Unknown');
+
+            const safeName = (currentResult.name || 'project').replace(/[^a-z0-9-_ ]/gi, '').trim() || 'project';
+            doc.save(`${safeName}_SDLC_Report.pdf`);
+        } catch (_error) {
+            window.alert('PDF export failed. Install frontend dependencies and try again.');
+        }
     };
 
     const handleShare = async () => {

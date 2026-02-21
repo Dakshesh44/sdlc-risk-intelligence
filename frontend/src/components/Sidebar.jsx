@@ -10,6 +10,8 @@ import {
     X
 } from 'lucide-react';
 
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'support@helixrisk.ai';
+
 const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
     const menuItems = [
         { name: 'Home', icon: <Home size={20} /> },
@@ -79,7 +81,7 @@ const Sidebar = ({ activeTab, setActiveTab, isOpen, onClose }) => {
                     <div className="p-4 rounded-xl bg-accent/50 border border-border flex flex-col gap-2">
                         <button
                             className="text-xs text-primary font-bold hover:underline text-left"
-                            onClick={() => window.open('mailto:support@flowpilot.ai', '_blank')}
+                            onClick={() => window.open(`mailto:${SUPPORT_EMAIL}`, '_blank')}
                         >
                             Support Center
                         </button>
