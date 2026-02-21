@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,15 +12,18 @@ from backend.routes.predict import router as predict_router
 logger = logging.getLogger(__name__)
 app = FastAPI()
 
-# Allow local frontend apps (Vite/React/Next) to call the API during development.
+# Allow local and deployed frontend apps to call the API.
+cors_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,https://helix-risk.onrender.com",
+)
+allow_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
+cors_origin_regex = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.onrender\.com")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=allow_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
